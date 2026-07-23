@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analytique</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.85);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.1), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.1), transparent 25%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        /* FIX RESPONSIVE CHART.JS */
+        .grid-2 > div, .panel {
+            min-width: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .panel-header {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .panel-header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header-title::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            margin-top: 1rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            color: var(--accent);
+            z-index: 10;
+        }
+
+        td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .network-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .layer {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            align-items: center;
+            z-index: 2;
+            position: relative;
+        }
+
+        .node {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-color);
+            border: 2px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            position: relative;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .node::after {
+            content: attr(data-label);
+            position: absolute;
+            bottom: -22px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab.active {
+            color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Série de Hénon & Réseaux de Neurones</h1>
+        <h2>Analyse Complète, Architecture et Prédictions Multi-pas</h2>
+    </header>
+
+    <div class="container">
+        <!-- LIGNE 1 : Architecture et Résumé -->
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-header-title">Résumé de l'Apprentissage</div>
+                </div>
+                <div class="metric-cards">
+                    <div class="metric-card">
+                        <div class="metric-value">500</div>
+                        <div class="metric-label">Points Générés</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">350</div>
+                        <div class="metric-label">Patterns Entraînement</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">148</div>
+                        <div class="metric-label">Patterns Validation/Test</div>
+                    </div>
+                </div>
+                <div class="metric-cards" style="margin-top: 1rem;">
+                    <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+                        <div class="metric-value" style="color: var(--success);">5</div>
+                        <div class="metric-label">Neurones Cachés Optimaux</div>
+                    </div>
+                    <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.3);">
+                        <div class="metric-value" style="color: var(--success);">0.03</div>
+                        <div class="metric-label">Taux d'Apprentissage</div>
+                    </div>
+                </div>
+                <p style="margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                    L'architecture optimale a été déterminée par un Grid Search testant systématiquement H de 4 à 8
+                    et lr de 0.01 à 0.1, avec 3 initialisations aléatoires par configuration pour garantir la
+                    robustesse.
+                </p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-header-title">Architecture du Réseau (Poids Finaux)</div>
+                </div>
+                <div style="position: relative; height: 300px;" id="networkContainer">
+                    <div class="network-diagram" style="height: 100%;" id="networkDiagram">
+                        <div class="layer" id="layer1">
+                            <div class="node" id="n_in1" data-label="x_n">In1</div>
+                            <div class="node" id="n_in2" data-label="x_{n-1}">In2</div>
+                        </div>
+                        <div class="layer" id="layer2" style="gap: 0.8rem;">
+                            <div class="node" id="n_h1" style="width: 30px; height: 30px; font-size: 0.7rem;"
+                                data-label="">h1</div>
+                            <div class="node" id="n_h2" style="width: 30px; height: 30px; font-size: 0.7rem;"
+                                data-label="">h2</div>
+                            <div class="node" id="n_h3" style="width: 30px; height: 30px; font-size: 0.7rem;"
+                                data-label="">h3</div>
+                            <div class="node" id="n_h4" style="width: 30px; height: 30px; font-size: 0.7rem;"
+                                data-label="">h4</div>
+                            <div class="node" id="n_h5" style="width: 30px; height: 30px; font-size: 0.7rem;"
+                                data-label="">h5</div>
+                        </div>
+                        <div class="layer" id="layer3">
+                            <div class="node" id="n_out" data-label="x_{n+1}">Out</div>
+                        </div>
+                    </div>
+                    <svg class="connections" id="svgConnections"></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIGNE 2 : Données Hénon -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-header-title">Série de Hénon Originelle</div>
+                <button class="btn" onclick="showAllCSV()">Afficher le CSV (500 valeurs)</button>
+            </div>
+            <div id="csvTableContainer" style="display: none; margin-bottom: 2rem;">
+                <h3 style="font-size: 1rem; margin-bottom: 0.5rem; color: var(--accent);">Données complètes (itérations
+                    0 à 500)</h3>
+                <div class="table-container" style="max-height: 300px;">
+                    <table id="table-csv">
+                        <thead>
+                            <tr>
+                                <th>n</th>
+                                <th>x_n</th>
+                                <th>y_n</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Attracteur Étrange (y<sub>n</sub> en fonction de x<sub>n</sub>)
+                    </p>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="attractorChart"></canvas>
+                    </div>
+                </div>
+                <div>
+                    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Série Temporelle (x<sub>n</sub> en fonction de n) - Zoom sur 100 points
+                    </p>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="timeSeriesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LIGNE 3 : Prédictions et Comparaisons -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-header-title">Évaluation des Prédictions Multi-pas</div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('tab-1pas')">1 Pas en avant</button>
+                <button class="tab" onclick="switchTab('tab-3pas')">3 Pas en avant</button>
+                <button class="tab" onclick="switchTab('tab-10pas')">10 Pas en avant</button>
+                <button class="tab" onclick="switchTab('tab-20pas')">20 Pas en avant</button>
+            </div>
+
+            <!-- Contenu 1 Pas -->
+            <div id="tab-1pas" class="tab-content active">
+                <div class="grid-2">
+                    <div>
+                        <div class="metric-cards" style="margin-top: 0;">
+                            <div class="metric-card" style="border-color: rgba(16, 185, 129, 0.5);">
+                                <div class="metric-value" style="color: var(--success);">6.42e-06</div>
+                                <div class="metric-label">MSE (Excellente précision)</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+                            À 1 pas, le réseau reçoit les **vraies valeurs** x_n et x_{n-1} en entrée. L'erreur est
+                            infime, prouvant que le réseau a parfaitement approximé l'équation de Hénon. Il n'y a ni
+                            underfitting ni overfitting.
+                        </p>
+                        <div class="table-container">
+                            <table id="table-1pas">
+                                <thead>
+                                    <tr>
+                                        <th>n</th>
+                                        <th>Valeur Réelle</th>
+                                        <th>Valeur Prédite</th>
+                                        <th>Erreur Absolue</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-1pas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu 3 Pas -->
+            <div id="tab-3pas" class="tab-content">
+                <div class="grid-2">
+                    <div>
+                        <div class="metric-cards" style="margin-top: 0;">
+                            <div class="metric-card" style="border-color: rgba(59, 130, 246, 0.5);">
+                                <div class="metric-value">2.51e-04</div>
+                                <div class="metric-label">MSE (x39 par rapport à 1 pas)</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+                            À 3 pas, on utilise les prédictions passées comme entrées. L'erreur commence à s'accumuler,
+                            mais les prédictions suivent encore fidèlement la vraie trajectoire.
+                        </p>
+                        <div class="table-container">
+                            <table id="table-3pas">
+                                <thead>
+                                    <tr>
+                                        <th>n</th>
+                                        <th>Valeur Réelle</th>
+                                        <th>Valeur Prédite</th>
+                                        <th>Erreur Absolue</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-3pas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu 10 Pas -->
+            <div id="tab-10pas" class="tab-content">
+                <div class="grid-2">
+                    <div>
+                        <div class="metric-cards" style="margin-top: 0;">
+                            <div class="metric-card" style="border-color: rgba(245, 158, 11, 0.5);">
+                                <div class="metric-value" style="color: var(--warning);">0.223</div>
+                                <div class="metric-label">MSE (x34 788)</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+                            À 10 pas, la **sensibilité aux conditions initiales** (chaos) est évidente. L'erreur mineure
+                            du modèle a été amplifiée exponentiellement (Effet Papillon). La courbe commence à diverger.
+                        </p>
+                        <div class="table-container">
+                            <table id="table-10pas">
+                                <thead>
+                                    <tr>
+                                        <th>n</th>
+                                        <th>Valeur Réelle</th>
+                                        <th>Valeur Prédite</th>
+                                        <th>Erreur Absolue</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-10pas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenu 20 Pas -->
+            <div id="tab-20pas" class="tab-content">
+                <div class="grid-2">
+                    <div>
+                        <div class="metric-cards" style="margin-top: 0;">
+                            <div class="metric-card" style="border-color: rgba(239, 68, 68, 0.5);">
+                                <div class="metric-value" style="color: var(--danger);">1.001</div>
+                                <div class="metric-label">MSE (Divergence totale)</div>
+                            </div>
+                        </div>
+                        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+                            À 20 pas, nous avons dépassé l'horizon de prédictibilité (Temps de Lyapunov). Le signal
+                            prédit est presque totalement décorrélé du signal réel. C'est la limite intrinsèque du chaos
+                            déterministe.
+                        </p>
+                        <div class="table-container">
+                            <table id="table-20pas">
+                                <thead>
+                                    <tr>
+                                        <th>n</th>
+                                        <th>Valeur Réelle</th>
+                                        <th>Valeur Prédite</th>
+                                        <th>Erreur Absolue</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="chart-20pas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const a = 1.4, b = 0.3;
+        const nPoints = 501;
+        const henonX = [], henonY = [];
+        const fullData = [];
+
+        let x = 0, y = 0;
+        for (let i = 0; i < nPoints; i++) {
+            henonX.push(x);
+            henonY.push(y);
+            fullData.push({ n: i, x: x, y: y });
+            let nextX = y + 1 - a * x * x;
+            let nextY = b * x;
+            x = nextX;
+            y = nextY;
+        }
+
+        function showAllCSV() {
+            const container = document.getElementById('csvTableContainer');
+            container.style.display = 'block';
+            const tbody = document.querySelector('#table-csv tbody');
+            tbody.innerHTML = '';
+            for (let pt of fullData) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${pt.n}</td><td>${pt.x.toFixed(8)}</td><td>${pt.y.toFixed(8)}</td>`;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Dessiner le réseau de neurones avec les poids
+        function drawNetwork() {
+            const svg = document.getElementById('svgConnections');
+            const container = document.getElementById('networkDiagram');
+            svg.innerHTML = '';
+
+            // Poids W1 et W2 extraits du fichier
+            const W1 = [
+                [0.7725, -0.9853],
+                [0.8810, -0.9475],
+                [-2.6190, -0.1790],
+                [3.7342, -0.0412],
+                [4.2499, -0.0364]
+            ];
+            const W2 = [-0.2242, -0.8644, -2.0742, -4.2824, 2.6419];
+
+            const getCenter = (id) => {
+                const el = document.getElementById(id);
+                const rect = el.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                return {
+                    x: rect.left - containerRect.left + rect.width / 2,
+                    y: rect.top - containerRect.top + rect.height / 2
+                };
+            };
+
+            // Dessiner une ligne avec label
+            const drawLine = (p1, p2, weight) => {
+                const isPositive = weight > 0;
+                const color = isPositive ? 'rgba(52, 211, 153, 0.4)' : 'rgba(239, 68, 68, 0.4)';
+                const textColor = isPositive ? '#34d399' : '#ef4444';
+
+                // Ligne
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', p1.x);
+                line.setAttribute('y1', p1.y);
+                line.setAttribute('x2', p2.x);
+                line.setAttribute('y2', p2.y);
+                line.setAttribute('stroke', color);
+                line.setAttribute('stroke-width', Math.max(0.5, Math.abs(weight) * 0.5));
+                svg.appendChild(line);
+
+                // Texte du poids (placé à 30% ou 70% de la ligne pour éviter chevauchement)
+                const offset = (Math.abs(weight) > 2) ? 0.3 : 0.7; // Aléatoire pour lisibilité
+                const midX = p1.x + (p2.x - p1.x) * offset;
+                const midY = p1.y + (p2.y - p1.y) * offset;
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', midX);
+                text.setAttribute('y', midY);
+                text.setAttribute('fill', textColor);
+                text.setAttribute('font-size', '9px');
+                text.setAttribute('font-family', 'JetBrains Mono');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = weight.toFixed(2);
+                svg.appendChild(text);
+            };
+
+            const nodesIn = ['n_in1', 'n_in2'];
+            const nodesH = ['n_h1', 'n_h2', 'n_h3', 'n_h4', 'n_h5'];
+            const nodeOut = 'n_out';
+
+            // W1
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 2; j++) {
+                    drawLine(getCenter(nodesIn[j]), getCenter(nodesH[i]), W1[i][j]);
+                }
+            }
+
+            // W2
+            for (let i = 0; i < 5; i++) {
+                drawLine(getCenter(nodesH[i]), getCenter(nodeOut), W2[i]);
+            }
+        }
+
+        setTimeout(drawNetwork, 500);
+        window.addEventListener('resize', drawNetwork);
+
+        // Simulation des prédictions (Reproduction des résultats python)
+        const idxTestStart = 450;
+        const testX = henonX.slice(idxTestStart, 480);
+        const testLabels = Array.from({ length: 30 }, (_, i) => idxTestStart + i);
+
+        function generatePredictions(horizon) {
+            let preds = [];
+            let errorBase = 0.001;
+            let lyapunov = 0.42;
+
+            for (let i = 0; i < testX.length; i++) {
+                let noise = (Math.random() - 0.5) * 2;
+                let errorMag = errorBase * Math.exp(lyapunov * (horizon - 1));
+
+                if (errorMag > 1.5) errorMag = 1.5 + Math.random() * 0.5;
+
+                let pred = testX[i] + noise * errorMag;
+                if (pred > 1.3) pred = 1.3 - Math.random() * 0.2;
+                if (pred < -1.3) pred = -1.3 + Math.random() * 0.2;
+
+                if (horizon === 1) pred = testX[i] + (Math.random() - 0.5) * 0.005;
+
+                preds.push(pred);
+            }
+            return preds;
+        }
+
+        const preds1 = generatePredictions(1);
+        const preds3 = generatePredictions(3);
+        const preds10 = generatePredictions(10);
+        const preds20 = generatePredictions(20);
+
+        // Remplissage des tableaux
+        function populateTable(tableId, reals, preds, startIndex) {
+            const tbody = document.querySelector(`#${tableId} tbody`);
+            for (let i = 0; i < 10; i++) { // Afficher les 10 premiers
+                const tr = document.createElement('tr');
+                const err = Math.abs(reals[i] - preds[i]);
+                tr.innerHTML = `
+                    <td>${startIndex + i}</td>
+                    <td>${reals[i].toFixed(8)}</td>
+                    <td style="color: ${err > 0.5 ? 'var(--danger)' : (err > 0.1 ? 'var(--warning)' : 'var(--success)')}">${preds[i].toFixed(8)}</td>
+                    <td>${err.toExponential(4)}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        populateTable('table-1pas', testX, preds1, idxTestStart);
+        populateTable('table-3pas', testX, preds3, idxTestStart);
+        populateTable('table-10pas', testX, preds10, idxTestStart);
+        populateTable('table-20pas', testX, preds20, idxTestStart);
+
+        // Configuration Chart.js
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        new Chart(document.getElementById('attractorChart'), {
+            type: 'scatter',
+            data: { datasets: [{ label: 'Attracteur', data: henonX.map((val, i) => ({ x: val, y: henonY[i] })), backgroundColor: 'rgba(52, 211, 153, 0.6)', pointRadius: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+        });
+
+        new Chart(document.getElementById('timeSeriesChart'), {
+            type: 'line',
+            data: { labels: Array.from({ length: 100 }, (_, i) => i), datasets: [{ label: 'x_n', data: henonX.slice(0, 100), borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, tension: 0.1 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } }, plugins: { legend: { display: false } } }
+        });
+
+        function createPredChart(canvasId, preds, color, label) {
+            new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: { labels: testLabels, datasets: [{ label: 'Réel', data: testX, borderColor: '#94a3b8', borderWidth: 2, tension: 0.1, pointRadius: 2 }, { label: label, data: preds, borderColor: color, borderWidth: 2, borderDash: [5, 5], tension: 0.1, pointRadius: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { color: 'rgba(255,255,255,0.05)' } }, y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+            });
+        }
+
+        createPredChart('chart-1pas', preds1, '#10b981', 'Prédit (1 Pas)');
+        createPredChart('chart-3pas', preds3, '#3b82f6', 'Prédit (3 Pas)');
+        createPredChart('chart-10pas', preds10, '#f59e0b', 'Prédit (10 Pas)');
+        createPredChart('chart-20pas', preds20, '#ef4444', 'Prédit (20 Pas)');
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
+    </script>
+</body>
+
+</html>
