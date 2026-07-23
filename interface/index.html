@@ -76,9 +76,8 @@
             gap: 2rem;
         }
 
-        /* FIX RESPONSIVE CHART.JS */
-        .grid-2 > div, .panel {
-            min-width: 0;
+        .grid-2 > div {
+            min-width: 0; /* Empêche le débordement des canvas lors du redimensionnement */
         }
 
         @media (max-width: 1024px) {
@@ -315,6 +314,31 @@
             to {
                 opacity: 1;
             }
+        }
+
+        footer {
+            margin-top: 4rem;
+            padding: 1.5rem 2rem;
+            text-align: center;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        footer p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin: 0;
+        }
+
+        footer .footer-author {
+            background: linear-gradient(to right, #60a5fa, #34d399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 600;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
@@ -593,8 +617,11 @@
     </div>
 
     <script>
+        // ----------------------------------------------------
+        // Génération des données locales pour l'interface (de 0 à 500)
+        // ----------------------------------------------------
         const a = 1.4, b = 0.3;
-        const nPoints = 501;
+        const nPoints = 501; // de 0 à 500 inclus
         const henonX = [], henonY = [];
         const fullData = [];
 
@@ -609,6 +636,7 @@
             y = nextY;
         }
 
+        // Fonction d'affichage du CSV
         function showAllCSV() {
             const container = document.getElementById('csvTableContainer');
             container.style.display = 'block';
@@ -621,7 +649,9 @@
             }
         }
 
+        // ----------------------------------------------------
         // Dessiner le réseau de neurones avec les poids
+        // ----------------------------------------------------
         function drawNetwork() {
             const svg = document.getElementById('svgConnections');
             const container = document.getElementById('networkDiagram');
@@ -699,7 +729,9 @@
         setTimeout(drawNetwork, 500);
         window.addEventListener('resize', drawNetwork);
 
+        // ----------------------------------------------------
         // Simulation des prédictions (Reproduction des résultats python)
+        // ----------------------------------------------------
         const idxTestStart = 450;
         const testX = henonX.slice(idxTestStart, 480);
         const testLabels = Array.from({ length: 30 }, (_, i) => idxTestStart + i);
@@ -789,6 +821,12 @@
         }
 
     </script>
+
+    <footer>
+        <p>PRÉDICTION ET MODÉLISATION DE SÉRIES TEMPORELLES PAR RÉSEAUX DE NEURONES ARTIFICIELS MULTICOUCHES</p>
+        <p class="footer-author">Steve RAKOTOARISOA </p>
+    </footer>
+
 </body>
 
 </html>
